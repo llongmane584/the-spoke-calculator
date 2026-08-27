@@ -50,7 +50,7 @@ jobs:
         run: |
           npm install --global corepack@latest
           corepack enable
-          corepack prepare "$(node -p "require('./package.json').packageManager || 'pnpm@10'")" --activate
+          corepack prepare "$(node -p "require('./package.json').packageManager || 'pnpm@11'")" --activate
           pnpm --version
 
       - name: Install dependencies
