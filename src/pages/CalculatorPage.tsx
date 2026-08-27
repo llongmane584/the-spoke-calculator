@@ -1479,7 +1479,7 @@ const SpokeLengthCalculator: React.FC = () => {
       results: currentResults,
       timestamp: new Date().toISOString(),
       metadata: {
-        calculator: 'Bicycle Spoke Calculator',
+        calculator: 'The Spoke Calculator',
         version: '1.0'
       }
     };

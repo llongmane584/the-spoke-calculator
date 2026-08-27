@@ -1,4 +1,4 @@
-# Bicycle Spoke Calculator
+# The Spoke Calculator
 
 [Open the calculator](https://llongmane584.github.io/the-spoke-calculator/) · [日本語](README_ja.md)
 
