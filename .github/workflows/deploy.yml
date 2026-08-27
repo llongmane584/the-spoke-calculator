@@ -50,7 +50,14 @@ jobs:
         run: |
           npm install --global corepack@latest
           corepack enable
-          corepack prepare "$(node -p "require('./package.json').packageManager || 'pnpm@10'")" --activate
+          # packageManager が唯一の情報源。欠けていたらフォールバックせず落とす ——
+          # 別メジャーの pnpm で黙ってビルドが通る方が危険。
+          PNPM_SPEC=$(node -p "require('./package.json').packageManager ?? ''")
+          if [ -z "$PNPM_SPEC" ]; then
+            echo "::error file=package.json::packageManager が未設定です"
+            exit 1
+          fi
+          corepack prepare "$PNPM_SPEC" --activate
           pnpm --version
 
       - name: Install dependencies
