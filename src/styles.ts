@@ -201,9 +201,19 @@ export const getNumberInputClassName = (hasError: boolean, className?: string): 
  * btnGhost をそのまま使わないのは、欄の中では文字と同じ面に載るため
  * 既定の text-fg-muted では値と張り合ってしまうから。一段落とした
  * text-fg-subtle から始めて、触れたときだけ前へ出す。
+ *
+ * touch-none と select-none は長押しの連続増減 (useHoldRepeat) のためのもので、
+ * 見た目には効かない:
+ *
+ * - touch-none … これが無いと、押している指がスクロールの判定幅ぶん (数 px) 動いた
+ *   だけでブラウザが縦パンと解釈し、pointercancel で繰り返しが切られる。押したまま
+ *   指が微動するのは長押しでは普通に起きる。36px の的なのでここを掴んでスクロール
+ *   できなくなる不利益は無く、欄の残りはどこでも今までどおり掴める
+ * - select-none … 長押しでの文字選択とロングタップメニューを抑える
  */
 export const stepperGhost =
-  `${ghostIconBox} rounded-md text-fg-subtle transition-colors hover:bg-sunken hover:text-fg ` +
+  `${ghostIconBox} rounded-md touch-none select-none ` +
+  'text-fg-subtle transition-colors hover:bg-sunken hover:text-fg ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ' +
   'disabled:pointer-events-none disabled:text-fg-subtle/40';
 
