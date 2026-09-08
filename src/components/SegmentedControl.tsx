@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+import { useSegmentedDrag } from '../hooks/useSegmentedDrag'
+
 export interface SegmentedOption {
   value: string
   /** セグメントに描画する短いラベル */
@@ -34,6 +37,10 @@ interface SegmentedControlProps {
  * 要求しておらず、そのためだけに keydown ハンドラを足すと本設計が避けている
  * リスクを呼び戻すため。「未実装のバグ」ではないので直さないこと。
  *
+ * タップに加えて、指を置いたまま左右になぞっても選べる (useSegmentedDrag)。
+ * 狭い画面では 1 セグメントが 60px 前後しかなく、狙って一発でタップするのは細かい。
+ * なぞっている間は指の下が常に選択済みになるので、行き過ぎても離す前に戻せる。
+ *
  * 見た目は枠 + セグメント間の仕切り線 + 選択セグメントの塗り。隣接する
  * NumberInput と同じ border-line-strong の枠を持たせて、同じ「入力部品」として
  * 読めるようにしている。沈んだトラックの上にチップが乗る iOS 風の意匠は、
@@ -51,18 +58,33 @@ export function SegmentedControl({
   describedBy,
 }: SegmentedControlProps) {
   const dividerClass = invalid ? 'border-danger-line' : 'border-line-strong'
+  const groupRef = useRef<HTMLDivElement>(null)
+  const dragHandlers = useSegmentedDrag(
+    groupRef,
+    options.map(option => option.value),
+    value,
+    onChange,
+  )
 
   return (
     <div
+      ref={groupRef}
       role="radiogroup"
       aria-labelledby={labelledBy}
       aria-invalid={invalid || undefined}
       aria-describedby={describedBy}
       onBlur={onBlur}
+      {...dragHandlers}
       // max-w-sm が無いと広いビューポートで 1 セグメントが 180px 近くまで
       // 間延びする。384px 上限なら 4 分割で 96px、5 分割で 77px に収まる。
+      //
+      // touch-pan-y —— 横のジェスチャーはこちらで受ける。これが無いと Chromium が
+      // 横スワイプをオーバースクロール操作として横取りし、なぞりが pointercancel で
+      // 切られる。子孫には掛けない。中にスクロールコンテナが無いので touch-action の
+      // 探索はここまで遡る (ドロワーが `*` を要したのは、中の nav が自前のスクロール
+      // コンテナで探索がそこで止まっていたため)
       className={[
-        'flex w-full max-w-sm overflow-hidden rounded-md border transition-colors',
+        'flex w-full max-w-sm touch-pan-y overflow-hidden rounded-md border transition-colors',
         invalid ? 'border-danger-line bg-danger-soft' : 'border-line-strong bg-surface',
       ].join(' ')}
     >
