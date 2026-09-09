@@ -257,6 +257,9 @@
       "backToChangelog": "Back to the changelog",
       "empty": "There are no changes recorded for this year.",
       "releases": {
+        "v0_5_0": {
+          "notes": "Number of Spokes and Crossings can now be set by sliding your finger across the options.\nHolding down a stepper button in a number field now keeps changing the value."
+        },
         "v0_4_0": {
           "notes": "The menu can now be closed by swiping it back the way it came in."
         },
