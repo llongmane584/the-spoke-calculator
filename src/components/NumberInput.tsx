@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ChangeEvent, CompositionEvent, KeyboardEvent, MouseEvent } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useHoldRepeat } from '../hooks/useHoldRepeat';
 import { btnIcon, getNumberInputClassName, stepperGhost } from '../styles';
 import {
   canStepNumericText,
@@ -50,7 +51,9 @@ interface NumberInputProps {
  * inputMode はソフトキーボードを決める標準の属性なので、数字パッドは type="number" の
  * ときと変わらず出る。0.1 刻みの欄はむしろ小数点キーが確実に出るようになる。
  * 代わりにブラウザが持っていた矢印キー増減とスピンボタンは失われるので、
- * どちらもこのコンポーネントが持ち直している。
+ * どちらもこのコンポーネントが持ち直している —— スピンボタンの「押しっぱなしで
+ * 連続して進む」ぶんも含めて (useHoldRepeat)。矢印キー側は keydown のオート
+ * リピートがそのまま繰り返しになるので、こちらは何も足していない。
  */
 export const NumberInput: React.FC<NumberInputProps> = ({
   id,
@@ -72,6 +75,15 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   const isComposing = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const stepOptions = { step, min, max };
+
+  // 表示中の値の写し。増減の起点に使う (理由は commitStep)。
+  // 描画のたびに prop へ揃え直すので、外から値が入れ替わったとき
+  // (プリセットの読み込み、共有リンクの復元、手打ち) にも置いていかれない。
+  const valueRef = useRef(value);
+
+  useEffect(() => {
+    valueRef.current = value;
+  });
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = event.target.value;
@@ -98,8 +110,27 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     }
   };
 
-  const commitStep = (direction: 1 | -1) => {
-    onChange(stepNumericText(value, direction, stepOptions));
+  /**
+   * 1 段ぶん動かす。動いたら true、端に着いていて動けなければ false。
+   *
+   * 起点は prop の value ではなく写しの ref。長押しの繰り返しは 50ms ごとに来るので、
+   * 親の再描画がそれに間に合わなかった回のぶん、同じ段を二度踏むことになる。
+   * 自分で進めた値をそのまま次の起点にすれば、結果が再描画の速さに依らない。
+   */
+  const commitStep = (direction: 1 | -1): boolean => {
+    const current = valueRef.current;
+    const next = stepNumericText(current, direction, stepOptions);
+
+    // stepNumericText は min / max でクランプするので、端では起点と同じ文字列が返る。
+    // 「動かなかった = そこが端」なので、長押しの繰り返しはこれを合図に止まる
+    if (next === current) {
+      return false;
+    }
+
+    valueRef.current = next;
+    onChange(next);
+
+    return true;
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -128,9 +159,34 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   // 上の mousedown 抑止が効かなかったときの受け皿。効いていれば既にフォーカスは
   // 入力欄にあるので何も起きない。効かない環境でも、押した直後にフォーカスを
   // 引き戻せばステッパーは出たままになり、続けて押せる。
-  const handleStep = (direction: 1 | -1) => {
-    commitStep(direction);
+  const handleStep = (direction: 1 | -1): boolean => {
+    const stepped = commitStep(direction);
+
     inputRef.current?.focus();
+
+    return stepped;
+  };
+
+  // 押しっぱなしで連続して進むぶん。1 段目も含めて押し下げ側が持つ
+  const holdStepDown = useHoldRepeat(() => handleStep(-1));
+  const holdStepUp = useHoldRepeat(() => handleStep(1));
+
+  /**
+   * ポインタから起きた click は捨てる。押し下げ (onPointerDown) で既に 1 段
+   * 動かしているので、ここでも拾うと 1 タップで 2 段進む。
+   *
+   * 捨てずに残すのは detail が 0 の click。UI Events の detail はクリック回数なので、
+   * 実際の押し下げから起きた click は必ず 1 以上になる。0 で来るのは支援技術や
+   * キーボードが合成したもの (element.click() 相当) で、対応する pointerdown を持たない。
+   * ステッパーは tabIndex={-1} で Tab の順路には無いが、VoiceOver / TalkBack の
+   * スワイプ移動では届く —— この道を塞ぐと、そこからは増減できなくなる。
+   */
+  const handleVirtualClick = (direction: 1 | -1) => (event: MouseEvent<HTMLButtonElement>) => {
+    if (event.detail !== 0) {
+      return;
+    }
+
+    handleStep(direction);
   };
 
   return (
@@ -193,7 +249,8 @@ export const NumberInput: React.FC<NumberInputProps> = ({
           disabled={!canStepNumericText(value, -1, stepOptions)}
           aria-label={t('input.stepDown', { label })}
           onMouseDown={keepFocusInField}
-          onClick={() => handleStep(-1)}
+          onPointerDown={holdStepDown}
+          onClick={handleVirtualClick(-1)}
           className={stepperGhost}
         >
           <Minus aria-hidden="true" className={btnIcon} />
@@ -204,7 +261,8 @@ export const NumberInput: React.FC<NumberInputProps> = ({
           disabled={!canStepNumericText(value, 1, stepOptions)}
           aria-label={t('input.stepUp', { label })}
           onMouseDown={keepFocusInField}
-          onClick={() => handleStep(1)}
+          onPointerDown={holdStepUp}
+          onClick={handleVirtualClick(1)}
           className={stepperGhost}
         >
           <Plus aria-hidden="true" className={btnIcon} />
