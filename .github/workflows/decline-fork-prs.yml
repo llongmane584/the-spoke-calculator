@@ -1,0 +1,48 @@
+name: Decline fork pull requests
+
+# public リポジトリでは fork を禁止できず、「PR だけ無効化する」設定も GitHub には無い。
+# コードが入る経路自体は write 権限と main の ruleset で塞がっているので、残るのは
+# 受け付けない PR が一覧に溜まることだけ。それを自動で畳む (#183)。
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+# fork からの PR では pull_request のトークンが read-only になり、クローズできない。
+# pull_request_target はベースリポジトリ側の権限で走るのでクローズできる。引き換えに
+# PR 側のコードは checkout しない —— 信頼できないコードを書き込み権限下で動かさないため。
+permissions:
+  pull-requests: write
+
+jobs:
+  decline:
+    # 判定は作者名ではなく「fork かどうか」。同一リポジトリ内のブランチから出す
+    # メンテナ自身の PR (dev 宛て) は、この条件で素通りする。
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-slim
+
+    steps:
+      - name: Comment and close
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request.number;
+            const guide = `https://github.com/${owner}/${repo}/blob/HEAD/CONTRIBUTING.md`;
+            const body = [
+              'Thank you for taking the time, but this repository does not accept pull requests.',
+              'It is maintained by a single author, and every change goes through that workflow.',
+              'This PR is closed automatically — the close says nothing about the change itself.',
+              '',
+              `Bug reports, ideas, and questions are welcome as issues. See [CONTRIBUTING.md](${guide}).`,
+              '',
+              '---',
+              '',
+              'お時間を割いていただきありがとうございます。ただ、このリポジトリはコードの Pull Request を受け付けていません。',
+              '作者 1 人で管理しており、変更はすべてその流れの中で行っているためです。',
+              'この PR は自動でクローズされます。内容の良し悪しを示すものではありません。',
+              '',
+              `不具合の報告・要望・質問は issue で歓迎します。詳しくは [CONTRIBUTING.md](${guide}) をご覧ください。`,
+            ].join('\n');
+
+            await github.rest.issues.createComment({ owner, repo, issue_number: number, body });
+            await github.rest.pulls.update({ owner, repo, pull_number: number, state: 'closed' });
