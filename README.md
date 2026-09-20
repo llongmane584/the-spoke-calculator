@@ -29,3 +29,7 @@ pnpm lint
 pnpm test
 pnpm build
 ```
+
+## Contributing
+
+Issues are welcome; pull requests are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md).

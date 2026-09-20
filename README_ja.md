@@ -29,3 +29,7 @@ pnpm lint
 pnpm test
 pnpm build
 ```
+
+## コントリビューション
+
+issue は歓迎します。Pull Request は受け付けていません。詳しくは [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
