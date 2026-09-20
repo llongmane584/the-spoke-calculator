@@ -144,8 +144,9 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     commitStep(event.key === 'ArrowUp' ? 1 : -1);
   };
 
-  // ステッパーへフォーカスを移させない。mousedown の既定動作がフォーカス移動なので、
-  // そこだけ止める (click は従来どおり飛ぶ)。移させないのは 3 つの理由から:
+  // ステッパーへフォーカスを移させない。useHoldRepeat が pointerdown を抑止し、
+  // タッチの長押しも含めてフォーカスを保つ。mousedown の抑止も残す。
+  // 移させないのは 3 つの理由から:
   //
   // - ステッパーが出ている条件が group-focus-within なので、フォーカスが入力欄から
   //   外れた瞬間にボタンごと消える。押している最中に消えれば click は届かない
@@ -156,9 +157,8 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     event.preventDefault();
   };
 
-  // 上の mousedown 抑止が効かなかったときの受け皿。効いていれば既にフォーカスは
-  // 入力欄にあるので何も起きない。効かない環境でも、押した直後にフォーカスを
-  // 引き戻せばステッパーは出たままになり、続けて押せる。
+  // ポインタ操作ではフォーカスは入力欄に留まる。支援技術からの click などで
+  // ステッパーにフォーカスがあるときも、入力欄へ戻して続けて操作できるようにする。
   const handleStep = (direction: 1 | -1): boolean => {
     const stepped = commitStep(direction);
 
@@ -232,7 +232,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 
         ステッパーを押している間これが false に転じないことが要る (転じるとボタンが
         消えて click が届かない)。フォーカスは入力欄から動かないので focus-within は
-        押している間ずっと true —— それを担保しているのが下の keepFocusInField。
+        押している間ずっと true —— useHoldRepeat と keepFocusInField がこれを担う。
       */}
       <div
         className={
