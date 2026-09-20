@@ -17,7 +17,7 @@ jobs:
   decline:
     # 判定は作者名ではなく「fork かどうか」。同一リポジトリ内のブランチから出す
     # メンテナ自身の PR (dev 宛て) は、この条件で素通りする。
-    if: github.event.pull_request.head.repo.full_name != github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-slim
 
     steps:
