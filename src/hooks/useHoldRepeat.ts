@@ -64,6 +64,10 @@ export const useHoldRepeat = (
     // 右クリックと 2 本目以降の指は見ない
     if (!event.isPrimary || event.button !== 0) return;
 
+    // 長押し中も入力欄のフォーカスを保つ。Chromium の長押しメニュー経由の
+    // フォーカス移動は mousedown の抑止だけでは止まらない。
+    event.preventDefault();
+
     // 前の押しがまだ畳まれていなければここで畳む。二重に回さないための保険
     stop();
 
