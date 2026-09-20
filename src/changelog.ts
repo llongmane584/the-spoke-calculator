@@ -23,6 +23,7 @@ export interface ChangelogEntry {
  * (App.tsx の SPOKE_COUNTS と同じ書き方)。
  */
 export const CHANGELOG = [
+  { version: '0.5.1', date: '2026-09-20' },
   { version: '0.5.0', date: '2026-09-09' },
   { version: '0.4.0', date: '2026-08-19' },
   { version: '0.3.0', date: '2026-08-14' },
